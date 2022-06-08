@@ -1,34 +1,34 @@
+from itertools import compress
+from typing import List
+
 import cv2 as cv
-from cv2 import BFMatcher
+import numpy as np
+from numpy.typing import NDArray
 
-from definitions import DATA_DIR
-from feature import Orb, Sift
-from utils import ImageUtils
+from utils import Point
 
-if __name__ == "__main__":
-    box = cv.imread(str(DATA_DIR / "box.png"))
-    box_gray = ImageUtils.bgr_to_gray(box)
-    box2 = cv.imread(str(DATA_DIR / "box2.png"))
-    box2_gray = ImageUtils.bgr_to_gray(box2)
 
-    extractor = Sift(image=box_gray)
-    box_keypoints, box_descriptors = extractor.extract_features()
-    extractor2 = Sift(image=box2_gray)
-    box2_keypoints, box2_descriptors = extractor2.extract_features()
+class LKOpticalFlow:
 
-    matcher: BFMatcher = cv.BFMatcher_create()
-    matches = matcher.match(box_descriptors, box2_descriptors)
-    matches = list(filter(lambda x: x.distance < 150, matches))
+    @staticmethod
+    def track_keypoints(prev_img: NDArray, curr_img: NDArray, prev_points: List[Point]) -> List[Point]:
+        # Convert points to numpy array format for using Lucas Kanade
+        np_prev_points = np.array([point.get_x_y_numpy() for point in prev_points])
 
-    # Draw the matches
-    img_matches = cv.drawMatches(
-        img1=box, keypoints1=box_keypoints,
-        img2=box2, keypoints2=box2_keypoints,
-        matches1to2=matches,
-        outImg=None, flags=cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS
-    )
+        new_points, status, _ = cv.calcOpticalFlowPyrLK(
+            prevImg=prev_img, nextImg=curr_img,
+            prevPts=np_prev_points, nextPts=None
+        )
 
-    # Show matches
-    cv.namedWindow("Img", cv.WINDOW_NORMAL)
-    cv.imshow("Img", img_matches)
-    cv.waitKey(0)
+        # Only select those points that had a valid tracking
+        good_new_points = new_points[status == 1]
+        good_old_points = list(compress(prev_points, status))
+
+        # Reconvert from numpy format to point, keeping size and color of the previous point
+        retval = []
+        for i, new_point in enumerate(good_new_points):
+            retval.append(
+                Point.from_numpy_x_y(new_point, radius=good_old_points[i].radius, color=good_old_points[i].color)
+            )
+
+        return retval

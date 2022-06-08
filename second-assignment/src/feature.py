@@ -1,49 +1,58 @@
-from abc import abstractmethod, ABC
+import sys
 from time import time
-from typing import Tuple
+from typing import List
 
 import cv2 as cv
-from cv2 import Feature2D, KeyPoint
+from cv2 import Feature2D
 from numpy.typing import NDArray
 
+from utils import Point
 
-class FeatureExtractor(ABC):
-    
-    name = None
-    _img = None
 
-    def __init__(self, name: str, image: NDArray) -> None:
+class FeatureExtractor:
+
+    def __init__(self, name: str) -> None:
         self.name = name
-        self._img = image
+        self.extractor = None
 
-    @abstractmethod
-    def extract_features(self):
-        pass
+    def extract_keypoints(self, img: NDArray) -> List[Point]:
+        if self.extractor is not None:
+            return [Point.from_keypoint(kp) for kp in list(self.extractor.detect(img, mask=None))]
+        else:
+            sys.exit("ERROR: you cannot use this class as is, you need to use one of its implementations!")
 
-    def extract_features_timed(self, log: dict):
+    def extract_keypoints_timed(self, img: NDArray, log: dict) -> List[Point]:
         start = time()
-        retval = self.extract_features()
+        retval = self.extract_keypoints(img)
         end = time()
 
         log["time"] = end - start
         return retval
 
 
-class Sift(FeatureExtractor):
+class SIFT(FeatureExtractor):
     
-    def __init__(self, image: NDArray):
-        super().__init__("SIFT", image)
-
-    def extract_features(self) -> Tuple[Tuple[KeyPoint, ...], NDArray]:
-        sift: Feature2D = cv.SIFT_create()
-        return sift.detectAndCompute(self._img, mask=None)
+    def __init__(self) -> None:
+        super().__init__("SIFT")
+        self.extractor: Feature2D = cv.SIFT_create()
 
 
-class Orb(FeatureExtractor):
+class ORB(FeatureExtractor):
 
-    def __init__(self, image: NDArray):
-        super().__init__("ORB", image)
+    def __init__(self) -> None:
+        super().__init__("ORB")
+        self.extractor: Feature2D = cv.ORB_create()
 
-    def extract_features(self) -> Tuple[Tuple[KeyPoint, ...], NDArray]:
-        orb: Feature2D = cv.ORB_create()
-        return orb.detectAndCompute(self._img, mask=None)
+
+class GFTT(FeatureExtractor):
+
+    def __init__(self) -> None:
+        super().__init__("GFTT")
+        self.extractor: Feature2D = cv.GFTTDetector_create()
+
+
+class FAST(FeatureExtractor):
+
+    def __init__(self) -> None:
+        super().__init__("FAST")
+        self.extractor: Feature2D = cv.FastFeatureDetector_create()

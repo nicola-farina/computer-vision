@@ -2,27 +2,27 @@ import cv2 as cv
 from cv2 import BFMatcher
 
 from definitions import DATA_DIR
-from feature import Orb
+from feature import SIFT, GFTT, ORB, FAST
+from tracking import LKOpticalFlow
 from utils import ImageUtils
 
 
 def main():
-
     # Define some constants
-    sampling = 2
-
-    # Capture video
-    video = cv.VideoCapture(str(DATA_DIR / "video.mp4"))
+    video_path = str(DATA_DIR / "video.mp4")
+    window_name = "Feature Extraction and Tracking"
+    sampling = 15
 
     # Initialize variables
+    extractor = ORB()
     frame_idx = 0
-    prev_frame, prev_keypoints, prev_descriptors = None, None, None
-    curr_frame, curr_keypoints, curr_descriptors = None, None, None
-    matches = None
+    prev_frame_gray, prev_keypoints = None, None
+
+    # Capture video
+    video = cv.VideoCapture(video_path)
+    cv.namedWindow(window_name, cv.WINDOW_NORMAL)
 
     while video.isOpened():
-        log = {}
-
         ret, frame = video.read()
 
         if not ret:
@@ -34,31 +34,19 @@ def main():
 
         # Either sample features every "sampling" frames, or track them in the other frames
         if frame_idx % sampling == 0:
-            extractor = Orb(image=curr_frame_gray)
-            curr_keypoints, curr_descriptors = extractor.extract_features_timed(log)
+            curr_keypoints = extractor.extract_keypoints(curr_frame_gray)
+            img_keypoints = ImageUtils.draw_points(curr_frame, curr_keypoints)
+            cv.imshow(window_name, img_keypoints)
         else:
-            matcher: BFMatcher = cv.BFMatcher_create()
-            matches = matcher.match(prev_descriptors, curr_descriptors)
-
-        if matches:
-
-            # Draw the matches
-            img_matches = cv.drawMatches(
-                img1=prev_frame, keypoints1=prev_keypoints,
-                img2=curr_frame, keypoints2=curr_keypoints,
-                matches1to2=matches,
-                outImg=None
-            )
-
-            # Show matches
-            cv.namedWindow("Video", cv.WINDOW_NORMAL)
-            cv.imshow("Video", img_matches)
+            curr_keypoints = LKOpticalFlow.track_keypoints(prev_frame_gray, curr_frame_gray, prev_keypoints)
+            img_keypoints = ImageUtils.draw_points(curr_frame, curr_keypoints)
+            cv.imshow(window_name, img_keypoints)
 
         # Copy values for next iteration
-        prev_frame, prev_keypoints, prev_descriptors = frame.copy(), curr_keypoints, curr_descriptors
+        prev_frame_gray, prev_keypoints = curr_frame_gray.copy(), curr_keypoints
 
         # Exit if q is pressed
-        if cv.waitKey(1000) == ord('q') or not ret:
+        if cv.waitKey(1) == ord('q'):
             break
 
         # Increase frame counter
