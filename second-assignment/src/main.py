@@ -1,8 +1,7 @@
 import cv2 as cv
-from cv2 import BFMatcher
 
 from definitions import DATA_DIR
-from feature import SIFT, GFTT, ORB, FAST
+from feature import FeatureExtractor, Algorithm
 from tracking import LKOpticalFlow
 from utils import ImageUtils
 
@@ -14,7 +13,7 @@ def main():
     sampling = 15
 
     # Initialize variables
-    extractor = ORB()
+    extractor = FeatureExtractor(Algorithm.ORB)
     frame_idx = 0
     prev_frame_gray, prev_keypoints = None, None
 

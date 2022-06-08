@@ -1,25 +1,37 @@
 import sys
+from enum import Enum
 from time import time
 from typing import List
 
 import cv2 as cv
-from cv2 import Feature2D
 from numpy.typing import NDArray
 
 from utils import Point
 
 
+class Algorithm(Enum):
+    SIFT = "SIFT"
+    ORB = "ORB"
+    GFTT = "GFTT"
+    FAST = "FAST"
+
+
 class FeatureExtractor:
 
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.extractor = None
+    def __init__(self, algorithm: Algorithm) -> None:
+        if algorithm == Algorithm.SIFT:
+            self.extractor = cv.SIFT_create()
+        elif algorithm == Algorithm.ORB:
+            self.extractor = cv.ORB_create()
+        elif algorithm == Algorithm.GFTT:
+            self.extractor = cv.GFTTDetector_create()
+        elif algorithm == Algorithm.FAST:
+            self.extractor = cv.FastFeatureDetector_create()
+        else:
+            sys.exit("ERROR: You need to specify a valid algorithm!")
 
     def extract_keypoints(self, img: NDArray) -> List[Point]:
-        if self.extractor is not None:
-            return [Point.from_keypoint(kp) for kp in list(self.extractor.detect(img, mask=None))]
-        else:
-            sys.exit("ERROR: you cannot use this class as is, you need to use one of its implementations!")
+        return [Point.from_keypoint(kp) for kp in list(self.extractor.detect(img, mask=None))]
 
     def extract_keypoints_timed(self, img: NDArray, log: dict) -> List[Point]:
         start = time()
@@ -28,31 +40,3 @@ class FeatureExtractor:
 
         log["time"] = end - start
         return retval
-
-
-class SIFT(FeatureExtractor):
-    
-    def __init__(self) -> None:
-        super().__init__("SIFT")
-        self.extractor: Feature2D = cv.SIFT_create()
-
-
-class ORB(FeatureExtractor):
-
-    def __init__(self) -> None:
-        super().__init__("ORB")
-        self.extractor: Feature2D = cv.ORB_create()
-
-
-class GFTT(FeatureExtractor):
-
-    def __init__(self) -> None:
-        super().__init__("GFTT")
-        self.extractor: Feature2D = cv.GFTTDetector_create()
-
-
-class FAST(FeatureExtractor):
-
-    def __init__(self) -> None:
-        super().__init__("FAST")
-        self.extractor: Feature2D = cv.FastFeatureDetector_create()
