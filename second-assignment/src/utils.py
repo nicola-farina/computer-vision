@@ -55,3 +55,8 @@ class ImageUtils:
         for point in points:
             copy = cv.circle(img, center=point.get_x_y_int_tuple(), radius=point.radius, color=point.color, thickness=2)
         return copy
+
+    @staticmethod
+    def resize_img_by_factor(img: NDArray, factor: float) -> NDArray:
+        return cv.resize(img, (0, 0), fx=factor, fy=factor)
+
