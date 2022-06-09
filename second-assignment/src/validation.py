@@ -3,7 +3,7 @@ import statistics
 import cv2 as cv
 
 from definitions import DATA_DIR
-from extraction import FeatureExtractor, Algorithm
+from detection import FeatureDetector, Algorithm
 from tracking import LKOpticalFlow
 from utils import ImageUtils
 
@@ -49,12 +49,12 @@ def extraction_time():
             for algorithm in Algorithm:
                 if algorithm == Algorithm.FAST:
                     for thresh in thresholds:
-                        curr_keypoints, elapsed = FeatureExtractor(algorithm, fast_thresh=int(thresh)).extract_keypoints_timed(curr_frame_gray)
+                        curr_keypoints, elapsed = FeatureDetector(algorithm, fast_thresh=int(thresh)).detect_keypoints_timed(curr_frame_gray)
                         logs[algorithm.value][thresh]["duration"].append(elapsed)
                         logs[algorithm.value][thresh]["nfeatures"].append(len(curr_keypoints))
                 else:
                     for nf in nfeatures:
-                        curr_keypoints, elapsed = FeatureExtractor(algorithm, nfeatures=int(nf)).extract_keypoints_timed(curr_frame_gray)
+                        curr_keypoints, elapsed = FeatureDetector(algorithm, nfeatures=int(nf)).detect_keypoints_timed(curr_frame_gray)
                         logs[algorithm.value][nf].append(elapsed)
 
         # Increase frame counter
@@ -101,8 +101,8 @@ def features_comparison():
         # Extract every "sampling" frames
         if frame_idx == 90:
             for thresh in thresholds:
-                extractor = FeatureExtractor(algorithm, fast_thresh=thresh)
-                points = extractor.extract_keypoints(curr_frame_gray)
+                detector = FeatureDetector(algorithm, fast_thresh=thresh)
+                points = detector.detect_keypoints(curr_frame_gray)
                 img_points = ImageUtils.draw_points(curr_frame, points)
                 img_points = ImageUtils.resize_img_by_factor(img_points, 0.5)
                 img_points = img_points[240:720, 30:510]
@@ -129,7 +129,7 @@ def tracking_time_and_error():
         logs[algorithm.value]["time"] = []
         logs[algorithm.value]["error"] = []
 
-        extractor = FeatureExtractor(algorithm, nfeatures, threshold)
+        detector = FeatureDetector(algorithm, nfeatures, threshold)
 
         # Capture video
         video = cv.VideoCapture(video_path)
@@ -149,7 +149,7 @@ def tracking_time_and_error():
 
             # Extract every "sampling" frames, track in other frames
             if frame_idx % sampling == 0:
-                curr_keypoints = extractor.extract_keypoints(curr_frame_gray)
+                curr_keypoints = detector.detect_keypoints(curr_frame_gray)
             else:
                 (curr_keypoints, err), time = LKOpticalFlow.track_keypoints_timed(prev_frame_gray, curr_frame_gray, prev_keypoints, compute_avg_error=True)
                 logs[algorithm.value]["time"].append(time)
